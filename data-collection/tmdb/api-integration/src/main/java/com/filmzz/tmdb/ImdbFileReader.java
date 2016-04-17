@@ -21,33 +21,23 @@ import com.filmzz.tmdb.persistence.MovieService;
 import au.com.bytecode.opencsv.CSVWriter;
 
 public class ImdbFileReader {
-	private static final String BASE_URL_SEARCH = "https://api.themoviedb.org/3/movie";
-	private static final String OUTPUT_FILE_PATH_AGGREGATED = "/Users/Raghu/imdb-data-store/clean-data/test/aggregated-movie-ratings-1"; 
-	private static final String OUTPUT_FILE_PATH_NON_AGGREGATED = "/Users/Raghu/imdb-data-store/clean-data/test/non-aggregated-movie-ratings-1";
-	private static final String OUTPUT_FILE_PATH_ERROR_LOG = "/Users/Raghu/imdb-data-store/clean-data/test/error-log-1";
-
-	private String filePath;
 	private Pattern pattern;
 	private Pattern yearPattern;
 	private MovieService movieService;
-	
+
 	public ImdbFileReader() {
-		filePath = "/Users/Raghu/imdb-data-store/clean-data/test/movie-ratings-1";
 		pattern = Pattern.compile("([\\d\\.]{10})\\s+(\\d+)\\s+(\\d\\.\\d)\\s+(.*)");
 		//Year is present in all the lines in the imdb file. The format is "MovieTitle" (YYYY). The pattern below is to parse out 
 		//the MovieTitle and the year 
 		yearPattern = Pattern.compile("(.*)\\((\\d{4})\\).*");
 		movieService = new MovieService();
 	}
-	
-	public void parseImdbFile() throws IOException {
+
+	public void parseImdbFile(File imdbFile, CSVWriter aggregatedWriter, 
+			CSVWriter nonAggregatedWriter,
+			CSVWriter errorLogWriter) throws IOException {
 		long startTime = System.currentTimeMillis();
-		CSVWriter aggregatedWriter = createCsvWriter(OUTPUT_FILE_PATH_AGGREGATED);
-		CSVWriter nonAggregatedWriter = createCsvWriter(OUTPUT_FILE_PATH_NON_AGGREGATED);
-		CSVWriter errorLogWriter = createCsvWriter(OUTPUT_FILE_PATH_ERROR_LOG);
-		
 		OmdbApiClient omdbApiClient = new OmdbApiClient();
-		File imdbFile = new File(filePath);
 		List<String> lines = FileUtils.readLines(imdbFile);
 		Matcher matcher;
 		int numberOfOmdbApiCalls = 0;
@@ -59,7 +49,7 @@ public class ImdbFileReader {
 				String numberOfRatings = matcher.group(2);
 				String averageRating = matcher.group(3);
 				String titleAndYear = matcher.group(4);
-				
+
 				String title = null;
 				String year = null;
 				if (titleAndYear.startsWith("#")) {
@@ -67,83 +57,137 @@ public class ImdbFileReader {
 					System.out.println("The entry=" + titleAndYear + " begins with #..Removing the #");
 					titleAndYear = titleAndYear.replaceAll("#", "");
 				}
-				
+
 				matcher = yearPattern.matcher(titleAndYear);
 				if (matcher.matches()) {
 					title = matcher.group(1);
 					year = matcher.group(2);
 				}
-				
+
 				if (title != null) {
-					OmdbMovie omdbMovie = omdbApiClient.getOmdbMovie(title, "movie", year);
-					numberOfOmdbApiCalls++;
-					System.out.println("Number of OmdbApiCalls:" + numberOfOmdbApiCalls);
-					//Write to the DB
-					Movie movie = new Movie(titleAndYear, title, year, Long.valueOf(numberOfRatings),
-							Float.valueOf(averageRating), ratingsDistribution,
-							omdbMovie);
-					System.out.println("Saving movie with the titleAndYear:" + titleAndYear + " to the DB. ImdbId=" + movie.getImdbId());
 					try {
+						OmdbMovie omdbMovie = omdbApiClient.getOmdbMovie(title, "movie", year);
+						numberOfOmdbApiCalls++;
+						System.out.println("Number of OmdbApiCalls:" + numberOfOmdbApiCalls);
+						//Write to the DB
+						Movie movie = new Movie(titleAndYear, title, year, Long.valueOf(numberOfRatings),
+								Float.valueOf(averageRating), ratingsDistribution,
+								omdbMovie);
+
+						System.out.println("Saving movie with the titleAndYear:" + titleAndYear + " to the DB. ImdbId=" + movie.getImdbId());
 						movieService.createMovie(movie);
+
+						aggregatedWriter.writeNext(new String[] {titleAndYear, numberOfRatings, 
+								averageRating, ratingsDistribution,
+								title, year,
+								omdbMovie.getImdbID(),
+								omdbMovie.getActors(), omdbMovie.getAwards(), 
+								omdbMovie.getBoxOffice(), omdbMovie.getCountry(), 
+								omdbMovie.getDirector(), omdbMovie.getdVD(), 
+								omdbMovie.getGenre(), omdbMovie.getLanguage(),
+								omdbMovie.getMetascore(), omdbMovie.getPlot(),
+								omdbMovie.getPoster(),omdbMovie.getProduction(),
+								omdbMovie.getRated(), omdbMovie.getReleased(),
+								omdbMovie.getRuntime(), omdbMovie.getTitle(),
+								omdbMovie.getTomatoConsensus(), omdbMovie.getTomatoFresh(),
+								omdbMovie.getTomatoImage(), omdbMovie.getTomatoMeter(),
+								omdbMovie.getTomatoRating(), omdbMovie.getTomatoReviews(),
+								omdbMovie.getTomatoRotten(), omdbMovie.getTomatoURL(),
+								omdbMovie.getTomatoUserMeter(), omdbMovie.getTomatoUserRating(),
+								omdbMovie.getTomatoUserReviews()});
 					} catch (Exception e) {
 						e.printStackTrace();
 						errorLogWriter.writeNext(new String[] {line});
 					}
-					
-					aggregatedWriter.writeNext(new String[] {titleAndYear, numberOfRatings, 
-							averageRating, ratingsDistribution,
-							title, year,
-							omdbMovie.getImdbID(),
-							omdbMovie.getActors(), omdbMovie.getAwards(), 
-							omdbMovie.getBoxOffice(), omdbMovie.getCountry(), 
-							omdbMovie.getDirector(), omdbMovie.getdVD(), 
-							omdbMovie.getGenre(), omdbMovie.getLanguage(),
-							omdbMovie.getMetascore(), omdbMovie.getPlot(),
-							omdbMovie.getPoster(),omdbMovie.getProduction(),
-							omdbMovie.getRated(), omdbMovie.getReleased(),
-							omdbMovie.getRuntime(), omdbMovie.getTitle(),
-							omdbMovie.getTomatoConsensus(), omdbMovie.getTomatoFresh(),
-							omdbMovie.getTomatoImage(), omdbMovie.getTomatoMeter(),
-							omdbMovie.getTomatoRating(), omdbMovie.getTomatoReviews(),
-							omdbMovie.getTomatoRotten(), omdbMovie.getTomatoURL(),
-							omdbMovie.getTomatoUserMeter(), omdbMovie.getTomatoUserRating(),
-							omdbMovie.getTomatoUserReviews()});
 				} else {
 					System.out.println("Cannot get the OMDB movie information for the movie=" + titleAndYear + " and writing this line to the non-aggregated file");
 					nonAggregatedWriter.writeNext(new String[] {titleAndYear, numberOfRatings, averageRating, ratingsDistribution});
 				}
 			}
 		}
-		
+
 		aggregatedWriter.flush();
 		aggregatedWriter.close();
-		
+
 		nonAggregatedWriter.flush();
 		nonAggregatedWriter.close();
-		
+
 		errorLogWriter.flush();
 		errorLogWriter.close();
-		
+
 		System.out.println("Total Number of OmdbApiCalls:" + numberOfOmdbApiCalls);
 		long currentTime = System.currentTimeMillis();
 		System.out.println("The parsing of IMDB file took " + (currentTime - startTime)/1000 + " seconds");
 	}
-	
+
 	public static void main(String[] args) {
+		if (args.length != 1) {
+			throw new IllegalArgumentException("Pass in the IMDB movie file");
+		}
+
+		String filePath = args[0];
+		File inputFile = new File(filePath);
+		if (!inputFile.exists()) {
+			throw new IllegalArgumentException(String.format("The IMDB file: %s does not exist", filePath));
+		}
+
+		if (!inputFile.isFile()) {
+			throw new IllegalArgumentException(String.format("The IMDB file: %s is a directory", filePath));
+		}
+
+		if (!inputFile.canRead()) {
+			throw new IllegalArgumentException(String.format("The IMDB file: %s should be readable", filePath));
+		}
+		
+		CSVWriter aggregatedWriter = null;
+		CSVWriter nonAggregatedWriter = null;
+		CSVWriter errorLogWriter = null;
+		
+		File directory = inputFile.getParentFile();
+		try {
+			File aggregatedOutputFile = createOutputFile(directory, inputFile, "-aggregated");
+			aggregatedWriter = createCsvWriter(aggregatedOutputFile);
+			File nonAggregatedOutputFile = createOutputFile(directory, inputFile, "-nonaggregated");
+			nonAggregatedWriter = createCsvWriter(nonAggregatedOutputFile);
+			File errorLogOutputFile = createOutputFile(directory, inputFile, "-errorlog");
+			errorLogWriter = createCsvWriter(errorLogOutputFile);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
 		ImdbFileReader fileReader = new ImdbFileReader();
 		try {
-			fileReader.parseImdbFile();
+			fileReader.parseImdbFile(inputFile, aggregatedWriter, 
+					nonAggregatedWriter, errorLogWriter);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
 	
+	private static File createOutputFile(File directory, File inputFile, String suffix) throws Exception {
+		File outputFile = new File(directory.getAbsolutePath() + File.separator + inputFile.getName() + suffix);
+		if (outputFile.exists()) {
+			System.out.println("The file:" + outputFile.getAbsolutePath() + " already exists. Deleting it");
+			outputFile.delete();
+		}
+
+		System.out.println("Creating the file:" + outputFile.getAbsolutePath());
+		outputFile.createNewFile();
+		return outputFile;
+	}
+
 	private CSVWriter createCsvWriter(String filePath) throws IOException {
 		File outFile = new File(filePath);
 		outFile.delete();
 		outFile.createNewFile();
 		OutputStream outStream = FileUtils.openOutputStream(outFile);
+		CSVWriter csvWriter = new CSVWriter(new OutputStreamWriter(outStream, "UTF-8"));
+		return csvWriter;
+	}
+	
+	private static CSVWriter createCsvWriter(File file) throws IOException {
+		OutputStream outStream = FileUtils.openOutputStream(file);
 		CSVWriter csvWriter = new CSVWriter(new OutputStreamWriter(outStream, "UTF-8"));
 		return csvWriter;
 	}
