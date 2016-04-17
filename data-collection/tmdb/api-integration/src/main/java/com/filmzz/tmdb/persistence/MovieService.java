@@ -4,14 +4,19 @@ import java.util.List;
 
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
-import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.Configuration;
+import org.hibernate.service.ServiceRegistryBuilder;
 
 public class MovieService {	
+	private SessionFactory sessionFactory;
+	public MovieService() {
+		sessionFactory = getSessionFactory();
+	}
 	
 	public static void main(String[] args) {
 		MovieService movieService = new MovieService();
 		Movie movie = new Movie();
+		movie.setTitleAndYear("3 Idiots 2009");
 		movie.setImdbId("abcd");
 		movie.setImdbTitle("3 idiots");
 		movieService.createMovie(movie);
@@ -20,29 +25,26 @@ public class MovieService {
 		System.out.println("First Movie:" + movies.get(0).getImdbTitle());
 	}
 	
-	public SessionFactory getSessionFactory() {
+    private SessionFactory getSessionFactory() {
 		Configuration configuration = new Configuration().configure();
-		StandardServiceRegistryBuilder builder = new StandardServiceRegistryBuilder()
+		ServiceRegistryBuilder builder = new ServiceRegistryBuilder()
 				.applySettings(configuration.getProperties());
-		SessionFactory sessionFactory = configuration
-				.buildSessionFactory(builder.build());
+		SessionFactory sessionFactory = configuration.buildSessionFactory(builder.buildServiceRegistry());
 		return sessionFactory;
 	}
-
-	public Movie createMovie(Movie movie) {
-		Session session = getSessionFactory().openSession();
+	
+	public void createMovie(Movie movie) {
+		Session session = sessionFactory.openSession();
 		session.beginTransaction();
 		session.save(movie);
 		session.getTransaction().commit();
 		session.close();
-		System.out.println("Successfully created " + movie.getImdbId());
-		return movie;
 	}
 	
 	public List<Movie> getMovies() {
-		Session session = getSessionFactory().openSession();
+		Session session = sessionFactory.openSession();
 		@SuppressWarnings("unchecked")
-		List<Movie> movies = session.createQuery("FROM Employee").list();
+		List<Movie> movies = session.createQuery("FROM Movie").list();
 		session.close();
 		System.out.println("Found " + movies.size() + " Movies");
 		return movies;

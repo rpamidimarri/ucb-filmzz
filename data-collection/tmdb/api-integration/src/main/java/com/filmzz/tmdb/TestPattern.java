@@ -9,12 +9,16 @@ public class TestPattern {
 		String y = "kjshdkfjsder skjdfksd (2013)";
 		String z = "ajdfsdkljf (2000) (TV)";
 		String a = "ajdfsdkljf (2000/I) (TV)";
+		String b = "'As You Like It' at Shakespeare's Globe Theatre (2010) (V)";
+		String c = "'Campeón del barrio' (Su última canción) (1964)";
 		
 		Pattern pattern = Pattern.compile("(.*)\\((\\d{4})\\).*");
 		matcher(pattern.matcher(x));
 		matcher(pattern.matcher(y));
 		matcher(pattern.matcher(z));
 		matcher(pattern.matcher(a));
+		matcher(pattern.matcher(b));
+		matcher(pattern.matcher(c));
 	}
 	
 	private static void matcher(Matcher m) {

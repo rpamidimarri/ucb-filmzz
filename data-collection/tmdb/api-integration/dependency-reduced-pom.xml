@@ -38,6 +38,7 @@
     </dependency>
   </dependencies>
   <properties>
+    <hibernate.version>4.2.15.Final</hibernate.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 </project>
