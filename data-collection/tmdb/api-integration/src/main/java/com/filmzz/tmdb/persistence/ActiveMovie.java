@@ -1,17 +1,25 @@
 package com.filmzz.tmdb.persistence;
 
 import java.io.Serializable;
+import java.util.Date;
 
+import javax.persistence.EmbeddedId;
 import javax.persistence.Entity;
 import javax.persistence.Table;
 
+import com.filmzz.tmdb.model.TmdbMovie;
+
 @Entity
-@Table(name = "Movie")
+@Table(name = "ActiveMovie")
 public class ActiveMovie implements Serializable {
-	private String tmdbId;
+	@EmbeddedId
+	private TmdbIdCount tmdbIdCount;
 	private String imdbId;
 	private String status;
-	private String day;
+	//Indicates whether the movie is running or upcoming
+	//Timestamp when the script was run
+	private String executionTime;
+	private String title;
 	
 	private String tmdbBudget;
 	private String tmdbHomePage;
@@ -27,16 +35,54 @@ public class ActiveMovie implements Serializable {
 	private String tmdbVoteCount;
 	private String tmdbVideo;
 	
-	public ActiveMovie() {
+	public ActiveMovie() {		
+	}
+	
+	public ActiveMovie(int execCount, String status, TmdbMovie tmdbMovie) {
+		TmdbIdCount pk = new TmdbIdCount();
+		pk.setExecutionCount(execCount);
+		pk.setTmdbId(String.valueOf(tmdbMovie.getTmdbId()));
+		this.tmdbIdCount = pk;
 		
+		this.imdbId = tmdbMovie.getImdbId();
+		this.status = status;
+		this.title = tmdbMovie.getTitle();
+		this.executionTime = new Date().toString();
+		this.tmdbHomePage = tmdbMovie.getHomepage();
+		this.tmdbOverview = tmdbMovie.getOverview();
+		this.tmdbPopularity = String.valueOf(tmdbMovie.getPopularity());
+		this.tmdbReleaseDate = tmdbMovie.getReleaseDate();
+		this.tmdbRevenue = String.valueOf(tmdbMovie.getRevenue());
+		this.tmdbRuntime = String.valueOf(tmdbMovie.getRuntime());
+		this.tmdbStatus = tmdbMovie.getStatus();
+		this.tmdbTagline = tmdbMovie.getTagline();
+		this.tmdbTitle = tmdbMovie.getTitle();
+		this.tmdbVoteAverage = String.valueOf(tmdbMovie.getVoteAverage());
+		this.tmdbVoteCount = String.valueOf(tmdbMovie.getVoteCount());
 	}
 
-	public String getTmdbId() {
-		return tmdbId;
+	public TmdbIdCount getTmdbIdCount() {
+		return tmdbIdCount;
 	}
 
-	public void setTmdbId(String tmdbId) {
-		this.tmdbId = tmdbId;
+	public void setTmdbIdCount(TmdbIdCount tmdbIdCount) {
+		this.tmdbIdCount = tmdbIdCount;
+	}
+	
+	public String getTitle() {
+		return title;
+	}
+
+	public void setTitle(String title) {
+		this.title = title;
+	}
+
+	public String getExecutionTime() {
+		return executionTime;
+	}
+
+	public void setExecutionTime(String executionTime) {
+		this.executionTime = executionTime;
 	}
 
 	public String getImdbId() {
@@ -53,14 +99,6 @@ public class ActiveMovie implements Serializable {
 
 	public void setStatus(String status) {
 		this.status = status;
-	}
-
-	public String getDay() {
-		return day;
-	}
-
-	public void setDay(String day) {
-		this.day = day;
 	}
 
 	public String getTmdbBudget() {

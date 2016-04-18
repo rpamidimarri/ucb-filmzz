@@ -60,13 +60,14 @@ public class TmdbMovie {
 	public void setTmdbId(int tmdbId) {
 		this.tmdbId = tmdbId;
 	}
+	
 
-	public String getImdb_id() {
+	public String getImdbId() {
 		return imdbId;
 	}
 
-	public void setImdb_id(String imdb_id) {
-		this.imdbId = imdb_id;
+	public void setImdbId(String imdbId) {
+		this.imdbId = imdbId;
 	}
 
 	public String getHomepage() {

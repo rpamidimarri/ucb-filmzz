@@ -14,7 +14,7 @@ public class MovieService {
 	}
 	
 	public static void main(String[] args) {
-		MovieService movieService = new MovieService();
+/*		MovieService movieService = new MovieService();
 		Movie movie = new Movie();
 		movie.setTitleAndYear("3 Idiots 2009");
 		movie.setImdbId("abcd");
@@ -22,7 +22,29 @@ public class MovieService {
 		movieService.createMovie(movie);
 		
 		List<Movie> movies = movieService.getMovies();
-		System.out.println("First Movie:" + movies.get(0).getImdbTitle());
+		System.out.println("First Movie:" + movies.get(0).getImdbTitle());*/
+		MovieService movieService = new MovieService();
+		ActiveMovie activeMovie = new ActiveMovie();
+		activeMovie.setExecutionTime("ajdlwe");
+		TmdbIdCount pk = new TmdbIdCount();
+		pk.setExecutionCount(1);
+		pk.setTmdbId("1234");
+		activeMovie.setTmdbIdCount(pk);
+		activeMovie.setImdbId("imdb-id");
+		movieService.createActiveMovie(activeMovie);
+		System.out.println("Max Exec Count:" +movieService.getLatestExecutionCount());
+		
+		activeMovie = new ActiveMovie();
+		activeMovie.setExecutionTime("ajdlwe");
+		pk = new TmdbIdCount();
+		pk.setExecutionCount(2);
+		pk.setTmdbId("1234");
+		activeMovie.setTmdbIdCount(pk);
+		activeMovie.setImdbId("imdb-id");
+		movieService.createActiveMovie(activeMovie);
+		System.out.println("Max Exec Count:" +movieService.getLatestExecutionCount());
+		//List<ActiveMovie> activeMovies = movieService.getActiveMovies();
+		//System.out.println("First active movie's count: " + activeMovies.get(0).getTmdbIdCount().getExecutionCount());
 	}
 	
     private SessionFactory getSessionFactory() {
@@ -32,6 +54,14 @@ public class MovieService {
 		SessionFactory sessionFactory = configuration.buildSessionFactory(builder.buildServiceRegistry());
 		return sessionFactory;
 	}
+    
+    public void createActiveMovie(ActiveMovie activeMovie) {
+		Session session = sessionFactory.openSession();
+		session.beginTransaction();
+		session.save(activeMovie);
+		session.getTransaction().commit();
+		session.close();
+    }
 	
 	public void createMovie(Movie movie) {
 		Session session = sessionFactory.openSession();
@@ -46,8 +76,43 @@ public class MovieService {
 		@SuppressWarnings("unchecked")
 		List<Movie> movies = session.createQuery("FROM Movie").list();
 		session.close();
-		System.out.println("Found " + movies.size() + " Movies");
+		if (movies != null) {
+			System.out.println("Found " + movies.size() + " movies");
+		} else {
+			System.out.println("Found no Active Movies!");
+		}
 		return movies;
+	}
+	
+	public List<ActiveMovie> getActiveMovies() {
+		Session session = sessionFactory.openSession();
+		@SuppressWarnings("unchecked")
+		List<ActiveMovie> activeMovies = session.createQuery("FROM ActiveMovie").list();
+		session.close();
+		if (activeMovies != null) {
+			System.out.println("Found " + activeMovies.size() + " Active Movies");
+		} else {
+			System.out.println("Found no Active Movies!");
+		}
+		return activeMovies;
+	}
+	
+	public int getLatestExecutionCount() {
+		int max = 0;
+		Session session = sessionFactory.openSession();
+		List countResult = session.createQuery("Select count(*) from ActiveMovie").list();
+		long count = (Long) countResult.get(0);
+		
+		if (count > 0) {
+			@SuppressWarnings("unchecked")
+			List result = session.createQuery("Select max(CAST(executioncount as int)) from ActiveMovie").list();
+			if (result != null && !result.isEmpty()) {
+				max = (Integer) result.get(0);
+			}
+		} 
+
+		session.close();
+		return max;
 	}
 
 }

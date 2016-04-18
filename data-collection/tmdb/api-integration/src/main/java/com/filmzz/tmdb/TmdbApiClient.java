@@ -7,8 +7,10 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpResponse;
@@ -27,10 +29,13 @@ import org.codehaus.jackson.node.ArrayNode;
 import org.codehaus.jackson.type.TypeReference;
 
 import com.filmzz.tmdb.model.TmdbMovie;
+import com.filmzz.tmdb.persistence.ActiveMovie;
+import com.filmzz.tmdb.persistence.MovieService;
 
 public class TmdbApiClient {
 	private HttpClient httpClient;
 	private ObjectMapper objectMapper;
+	private MovieService movieService;
 	private static final String BASE_URL_NOW_PLAYING = "https://api.themoviedb.org/3/movie/now_playing";
 	private static final String BASE_URL_MOVIE = "https://api.themoviedb.org/3/movie/";
 	private static final String BASE_URL_UPCOMING = "https://api.themoviedb.org/3/movie/upcoming";
@@ -40,36 +45,62 @@ public class TmdbApiClient {
 	private static final String TOTAL_PAGES = "total_pages";
 	private static final String TOTAL_RESULTS = "total_results";
 	private static final String RESULTS = "results";
+	private static final String STATUS_RUNNING = "running";
+	private static final String STATUS_UPCOMING = "upcoming";
 
 	public TmdbApiClient() {
 		httpClient = createHttpClient();
 		objectMapper = new ObjectMapper();
+		movieService = new MovieService();
 	}
 
 	public static void main(String[] args) {
 		TmdbApiClient apiClient = new TmdbApiClient();
-		Map<String, String> defaultQuery = apiClient.createQueryString();
-		
-		List<TmdbMovie> moviesNowPlaying = apiClient.getListOfMovies(BASE_URL_NOW_PLAYING, defaultQuery);
+		apiClient.downloadActiveMovies();
+	}
+
+	public void downloadActiveMovies() {
+		Set<String> setOfAlreadySavedTmdbIds = new HashSet<String>();
+		int existingExecCount = movieService.getLatestExecutionCount();
+		int execCount = 1;
+		if (existingExecCount > 0) {
+			System.out.println("We have downloaded active movies " + existingExecCount + " times so far. We are going to download the movies once more");
+			execCount = existingExecCount + 1;
+		}
+
+		Map<String, String> defaultQuery = createQueryString();
+		List<TmdbMovie> moviesNowPlaying = getListOfMovies(BASE_URL_NOW_PLAYING, defaultQuery);
 		if (moviesNowPlaying == null || moviesNowPlaying.isEmpty()) {
 			System.out.println("SOMETHING WENT WRONG! NO CURRENTLY RUNNING MOVIES FOUND");
 		}
 
 		System.out.println("Total number of movies now playing= " + moviesNowPlaying.size());
-		System.out.println("Printing all currently running movies..");
 		for (TmdbMovie movie : moviesNowPlaying) {
-			System.out.println(movie.toString());
+			if (!setOfAlreadySavedTmdbIds.contains(String.valueOf(movie.getTmdbId()))) {
+				ActiveMovie activeMovie = new ActiveMovie(execCount, STATUS_RUNNING, movie);
+				System.out.println("Saving the currently running movie:" + activeMovie.getTitle() + " with the primaryKey:" +activeMovie.getTmdbIdCount());
+				movieService.createActiveMovie(activeMovie);	
+				setOfAlreadySavedTmdbIds.add(String.valueOf(movie.getTmdbId()));
+			} else {
+				System.out.println("The currently running movie:" + movie.getTitle() + " has already been saved");
+			}
 		}
-		
-		List<TmdbMovie> moviesUpcoming = apiClient.getListOfMovies(BASE_URL_UPCOMING, defaultQuery);
+
+		List<TmdbMovie> moviesUpcoming = getListOfMovies(BASE_URL_UPCOMING, defaultQuery);
 		if (moviesUpcoming == null || moviesUpcoming.isEmpty()) {
 			System.out.println("SOMETHING WENT WRONG! NO UPCOMING MOVIES FOUND");
 		}
 
-		System.out.println("Total number of movies upcoming= " + moviesUpcoming.size());
-		System.out.println("Printing all upcoming movies..");
+		System.out.println("Total number of movies upcoming= " + moviesUpcoming.size());	
 		for (TmdbMovie movie : moviesUpcoming) {
-			System.out.println(movie.toString());
+			if (!setOfAlreadySavedTmdbIds.contains(String.valueOf(movie.getTmdbId()))) {
+				ActiveMovie activeMovie = new ActiveMovie(execCount, STATUS_UPCOMING, movie);
+				System.out.println("Saving the upcoming movie:" + activeMovie.getTitle() + " with the primaryKey:" +activeMovie.getTmdbIdCount());
+				movieService.createActiveMovie(activeMovie);	
+				setOfAlreadySavedTmdbIds.add(String.valueOf(movie.getTmdbId()));
+			} else {
+				System.out.println("The upcoming movie:" + movie.getTitle() + " has already been saved");
+			}
 		}
 	}
 
@@ -131,15 +162,15 @@ public class TmdbApiClient {
 			System.out.println("The API call to TMDB url= " + url + " returned no movies!");
 			return null;
 		}
-		
+
 		System.out.println("Number of movies retrieved= " + moviesWithLimitedInformation.size() + " for url=" + url);
 		System.out.println("About to make API calls to get more information about all these movies for url=" + url);
-		
+
 		List<TmdbMovie> moviesWithAllFields = new ArrayList<TmdbMovie>();
 		for (TmdbMovie movie : moviesWithLimitedInformation) {
 			moviesWithAllFields.add(getExtraInformationAboutMovie(String.valueOf(movie.getTmdbId())));
 		}
-		
+
 		return moviesWithAllFields;
 	}
 
