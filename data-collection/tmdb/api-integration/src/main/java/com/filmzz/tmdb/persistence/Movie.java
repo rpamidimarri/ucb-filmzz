@@ -68,6 +68,10 @@ public class Movie implements Serializable {
 		this.imdbavgrating = imdbavgrating;
 		this.imdbDistribution = imdbDistribution;
 		
+		if (omdbMovie == null) {
+			return;
+		}
+		
 		this.imdbId = omdbMovie.getImdbID();
 		
 		//All other omdb fields
