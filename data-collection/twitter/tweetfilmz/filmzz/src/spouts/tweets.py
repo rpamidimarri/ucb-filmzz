@@ -10,6 +10,10 @@ from streamparse.spout import Spout
 # Twitter credentials
 ################################################################################
 twitter_credentials = {
+    "consumer_key"        :  "",
+    "consumer_secret"     :  "",
+    "access_token"        :  "",
+    "access_token_secret" :  "",
 }
 
 def auth_get(auth_key):
@@ -27,7 +31,6 @@ class TweetStreamListener(tweepy.StreamListener):
         super(self.__class__, self).__init__(listener.tweepy_api())
 
     def on_status(self, status):
-        #print(status.text)
         self.listener.queue().put(status.text, timeout = 0.01)
         return True
   
@@ -58,8 +61,8 @@ class Tweets(Spout):
 
         # Create the stream and listen for english tweets
         stream = tweepy.Stream(auth, listener, timeout=None)
-        #TODO - THE BELOW NEEDS TO CHANGE. IN THE SPOUT, DO NOT TRACK FOR ANY KEYWORD. GET EVERY TWEET. WE WILL FILTER IN BOLT 
-        #stream.filter(languages=["en"], track=["a", "in", "of", "to", "and", "is", "it", "the", "i", "you", "u"], async=True)
+	# Some of the most used words in english
+        stream.filter(languages=["en"], track=["a", "in", "of", "to", "and", "is", "it", "the", "i", "you", "u"], async=True)
 
     def queue(self):
         return self._queue

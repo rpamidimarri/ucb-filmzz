@@ -1,8 +1,8 @@
 CREATE TABLE TweetStatistic (
-imdbId varchar(64),
-keyword varchar(200),
+tmdbId varchar(100),
+keyword varchar(1000),
 runningCount bigint,
 runningPositiveSentiment real,
 runningNegativeSentiment real,
-CONSTRAINT imdbId_tweetTime_stat PRIMARY KEY(keyword)
+CONSTRAINT tmdbId_stat PRIMARY KEY(tmdbId)
 )

@@ -1,8 +1,8 @@
 CREATE TABLE Tweets (
-imdbId varchar(64),
-tweetTime varchar(64),
-keyword varchar(200),
-fullTweet varchar(200),
-CONSTRAINT imdbId_tweetTime PRIMARY KEY(keyword,tweetTime)
+tmdbId varchar(100),
+tweetTime varchar(100),
+keyword varchar(1000),
+fullTweet varchar(1000),
+CONSTRAINT tmdbId_tweetTime PRIMARY KEY(tmdbId,tweetTime)
 )
 
