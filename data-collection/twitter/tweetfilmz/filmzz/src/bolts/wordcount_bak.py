@@ -11,12 +11,10 @@ class WordCounter(Bolt):
         self.counts = Counter()
 
     def process(self, tup):
-        id = tup.values[0]
-        title = tup.values[1]
-        tweet = tup.values[2]
+        word = tup.values[0]
         # Increment the local count
-        self.counts[title] += 1
-        self.emit([title, self.counts[title]])
+        self.counts[word] += 1
+        self.emit([word, self.counts[word]])
 
         # Log the count - just to see the topology running
-        self.log('%s: %d' % (title, self.counts[title]))
+        self.log('%s: %d' % (word, self.counts[word]))

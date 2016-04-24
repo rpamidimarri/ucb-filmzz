@@ -1,0 +1,112 @@
+from __future__ import absolute_import, print_function, unicode_literals
+
+import itertools, time
+import tweepy, copy 
+import Queue, threading
+import psycopg2
+
+from streamparse.spout import Spout
+
+################################################################################
+# Twitter credentials
+# ARUNA/RUDY - PLEASE USE YOUR TWITTER CREDS HERE
+################################################################################
+twitter_credentials = {
+    "consumer_key"        :  "",
+    "consumer_secret"     :  "",
+    "access_token"        :  "",
+    "access_token_secret" :  "",
+}
+
+def auth_get(auth_key):
+    if auth_key in twitter_credentials:
+        return twitter_credentials[auth_key]
+    return None
+
+################################################################################
+# Class to listen and act on the incoming tweets
+################################################################################
+class TweetStreamListener(tweepy.StreamListener):
+
+    def __init__(self, listener):
+        self.listener = listener
+        super(self.__class__, self).__init__(listener.tweepy_api())
+
+    def on_status(self, status):
+        self.listener.queue().put(status.text, timeout = 0.01)
+        return True
+  
+    def on_error(self, status_code):
+        return True # keep stream alive
+  
+    def on_limit(self, track):
+        return True # keep stream alive
+
+class Tweets(Spout):
+
+    def initialize(self, stormconf, context):
+        self._queue = Queue.Queue(maxsize = 100)
+
+        consumer_key = auth_get("consumer_key") 
+        consumer_secret = auth_get("consumer_secret") 
+        auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
+
+        if auth_get("access_token") and auth_get("access_token_secret"):
+            access_token = auth_get("access_token")
+            access_token_secret = auth_get("access_token_secret")
+            auth.set_access_token(access_token, access_token_secret)
+
+        self._tweepy_api = tweepy.API(auth)
+
+        # Create the listener for twitter stream
+        listener = TweetStreamListener(self)
+       
+        # CODE TO GET THE PHRASES TO FILTER ON.. 
+	maxCount = 0
+        conn = psycopg2.connect(database="filmzz", user="postgres", password="pass", host="localhost", port="5432")
+        cur = conn.cursor()
+        cur.execute("SELECT max(executioncount) from ActiveMovie")
+        result=cur.fetchone()
+        if result != None:
+            maxCount=result[0]
+
+        self.log('Existing maxCount is %d' % (maxCount))
+        #The idea with this query and the one below is - We will get all the title, ids of the running and upcoming movies based on the top tmd popularity and limit to 100
+        # we need to do this, because we want to let twitter figure out if a title is present in the movie (by passing in the track property to the filter with a list of all the
+        # movie titles. 
+        cur.execute("SELECT tmdbid, tmdbtitle FROM ActiveMovie WHERE executioncount=%s and status = 'running' order by tmdbpopularity::real DESC LIMIT 100", [maxCount])
+        records = cur.fetchall()
+        running_titlemap = {}
+        running_titles=[]
+        for rec in records:
+            running_titles.append(unicode(rec[1], "utf-8"))
+
+        #self.log('Printing the Tmdb ids and the movie titles for RUNNING MOVIES we are going to filter in tweets')
+        # Create the stream and listen for english tweets
+        #for running_title in running_titles:
+           #self.log(running_title.encode('ascii','replace'))
+        stream = tweepy.Stream(auth, listener, timeout=None) 
+        stream.filter(languages=["en"], track=running_titles, async=True)
+
+    def queue(self):
+        return self._queue
+
+    def tweepy_api(self):
+        return self._tweepy_api
+
+    def next_tuple(self):
+        try:
+            tweet = self.queue().get(timeout = 0.1) 
+            if tweet:  
+                self.queue().task_done()
+                self.emit([tweet])
+ 
+        except Queue.Empty:
+            self.log("Empty queue exception ")
+            time.sleep(0.1) 
+
+    def ack(self, tup_id):
+        pass  # if a tuple is processed properly, do nothing
+
+    def fail(self, tup_id):
+        pass  # if a tuple fails to process, do nothing

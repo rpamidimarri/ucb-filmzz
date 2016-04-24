@@ -3,6 +3,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import itertools, time
 import tweepy, copy 
 import Queue, threading
+import psycopg2
 
 from streamparse.spout import Spout
 
@@ -58,11 +59,30 @@ class Tweets(Spout):
 
         # Create the listener for twitter stream
         listener = TweetStreamListener(self)
+       
+        # CODE TO GET THE PHRASES TO FILTER ON.. 
+	maxCount = 0
+        conn = psycopg2.connect(database="filmzz", user="postgres", password="pass", host="localhost", port="5432")
+        cur = conn.cursor()
+        cur.execute("SELECT max(executioncount) from ActiveMovie")
+        result=cur.fetchone()
+        if result != None:
+            maxCount=result[0]
 
+        self.log('Existing maxCount is %d' % (maxCount))
+        cur.execute("SELECT tmdbid, tmdbtitle FROM ActiveMovie WHERE executioncount=%s and status = 'upcoming' order by tmdbpopularity::real DESC LIMIT 100", [maxCount])
+        records = cur.fetchall()
+        titlemap = {}
+        titles=[]
+        for rec in records:
+            titles.append(unicode(rec[1], "utf-8"))
+
+        #self.log('Printing the Tmdb ids and the movie titles for UPCOMING MOVIES we are going to filter in tweets')
         # Create the stream and listen for english tweets
-        stream = tweepy.Stream(auth, listener, timeout=None)
-	# Some of the most used words in english
-        stream.filter(languages=["en"], track=["a", "in", "of", "to", "and", "is", "it", "the", "i", "you", "u"], async=True)
+        #for running_title in running_titles:
+           #self.log(running_title.encode('ascii','replace'))
+        stream = tweepy.Stream(auth, listener, timeout=None) 
+        stream.filter(languages=["en"], track=titles, async=True)
 
     def queue(self):
         return self._queue
@@ -73,7 +93,7 @@ class Tweets(Spout):
     def next_tuple(self):
         try:
             tweet = self.queue().get(timeout = 0.1) 
-            if tweet:
+            if tweet:  
                 self.queue().task_done()
                 self.emit([tweet])
  
