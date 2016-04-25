@@ -74,7 +74,7 @@ class Tweets(Spout):
             maxCount=result[0]
 
         self.log('Existing maxCount is %d' % (maxCount))
-        cur.execute("SELECT tmdbid, tmdbtitle FROM ActiveMovie WHERE executioncount=%s and status = 'upcoming' order by tmdbpopularity::real DESC LIMIT 100", [maxCount])
+        cur.execute("SELECT tmdbid, searchtitle FROM ActiveMovie WHERE executioncount=%s and status = 'upcoming' and searchfortweets = 'true' order by tmdbpopularity::real DESC LIMIT 100", [maxCount])
         records = cur.fetchall()
         titlemap = {}
         titles=[]

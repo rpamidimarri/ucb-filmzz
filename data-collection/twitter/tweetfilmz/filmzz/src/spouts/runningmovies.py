@@ -61,10 +61,6 @@ class Tweets(Spout):
         # Create the listener for twitter stream
         listener = TweetStreamListener(self)
 
-        # NOTE THAT THERE ARE SOME WORDS  WE NEED TO IGNORE, EVEN IF THERE ARE MOVIES NAMES BASED ON IT
-        # THIS WILL HAVE TO BE IN A PROPERTIES FILE WHICH NEEDS TO BE UPDATED DAILY. OR IT SHOULD BE A COLUMN IN THE ACTIVE MOVIE TO IGNORE A MOVIE.
-        ignored_titles=["24","fake","countdown", "the ticket", "parents"]
-       
         # CODE TO GET THE PHRASES TO FILTER ON.. 
 	maxCount = 0
         conn = psycopg2.connect(database="filmzz", user="postgres", password="pass", host="localhost", port="5432")
@@ -78,7 +74,7 @@ class Tweets(Spout):
         #The idea with this query and the one below is - We will get all the title, ids of the running and upcoming movies based on the top tmd popularity and limit to 100
         # we need to do this, because we want to let twitter figure out if a title is present in the movie (by passing in the track property to the filter with a list of all the
         # movie titles. 
-        cur.execute("SELECT tmdbid, tmdbtitle FROM ActiveMovie WHERE executioncount=%s and status = 'running' order by tmdbpopularity::real DESC LIMIT 100", [maxCount])
+        cur.execute("SELECT tmdbid, searchtitle FROM ActiveMovie WHERE executioncount=%s and status = 'running' and searchfortweets = 'true' order by tmdbpopularity::real DESC LIMIT 100", [maxCount])
         records = cur.fetchall()
         running_titlemap = {}
         running_titles=[]

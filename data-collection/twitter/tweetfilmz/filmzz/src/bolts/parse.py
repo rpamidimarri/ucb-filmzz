@@ -50,7 +50,7 @@ class ParseTweet(Bolt):
         #The idea with this query and the one below is - We will get all the title, ids of the running and upcoming movies based on the top tmd popularity and limit to 100
         # we need to do this, because we want to let twitter figure out if a title is present in the movie (by passing in the track property to the filter with a list of all the
         # movie titles. 
-        cur.execute("SELECT tmdbid, tmdbtitle FROM ActiveMovie WHERE executioncount=%s and status = 'running' order by tmdbpopularity::real DESC LIMIT 100", [maxCount])
+        cur.execute("SELECT tmdbid, searchtitle FROM ActiveMovie WHERE executioncount=%s and status = 'running' and searchfortweets = 'true' order by tmdbpopularity::real DESC LIMIT 100", [maxCount])
         records = cur.fetchall()
         #self.log('Printing the Tmdb ids and the movie titles for RUNNING MOVIES we are going to filter in tweets')
         #All this unicode thing is very important in python
@@ -60,7 +60,7 @@ class ParseTweet(Bolt):
             titlemap[rec[0]]=unicodevalue
             titles.append(unicodevalue) 
         
-        cur.execute("SELECT tmdbid, tmdbtitle FROM ActiveMovie WHERE executioncount=%s and status = 'upcoming' order by tmdbpopularity::real DESC LIMIT 100", [maxCount])
+        cur.execute("SELECT tmdbid, searchtitle FROM ActiveMovie WHERE executioncount=%s and status = 'upcoming' and searchfortweets = 'true' order by tmdbpopularity::real DESC LIMIT 100", [maxCount])
         records = cur.fetchall()
         #self.log('Printing the Tmdb ids and the movie titles for UPCOMING MOVIES we are going to filter in tweets')
         for rec in records:
