@@ -58,8 +58,20 @@ public class TmdbApiClient {
 		TmdbApiClient apiClient = new TmdbApiClient();
 		apiClient.downloadActiveMovies();
 	}
+	
+	private List<String> getIgnoredTitles() {
+		List<String> ignoredTitles = new ArrayList<String>();
+		ignoredTitles.add("24");
+		ignoredTitles.add("fake");
+		ignoredTitles.add("parents");
+		ignoredTitles.add("countdown");
+		ignoredTitles.add("the ticket");
+		ignoredTitles.add("five");
+		return ignoredTitles;
+	}
 
 	public void downloadActiveMovies() {
+		List<String> ignoredTitles = getIgnoredTitles();
 		Set<String> setOfAlreadySavedTmdbIds = new HashSet<String>();
 		int existingExecCount = movieService.getLatestExecutionCount();
 		int execCount = 1;
@@ -77,7 +89,11 @@ public class TmdbApiClient {
 		System.out.println("Total number of movies now playing= " + moviesNowPlaying.size());
 		for (TmdbMovie movie : moviesNowPlaying) {
 			if (!setOfAlreadySavedTmdbIds.contains(String.valueOf(movie.getTmdbId()))) {
-				ActiveMovie activeMovie = new ActiveMovie(execCount, STATUS_RUNNING, movie);
+				boolean searchForTweets = true;
+				if (ignoredTitles.contains(movie.getTitle().toLowerCase())) {
+					searchForTweets = false;
+				}
+				ActiveMovie activeMovie = new ActiveMovie(execCount, STATUS_RUNNING, movie, searchForTweets);
 				System.out.println("Saving the currently running movie:" + activeMovie.getTitle() + " with the primaryKey:" +activeMovie.getTmdbIdCount());
 				movieService.createActiveMovie(activeMovie);	
 				setOfAlreadySavedTmdbIds.add(String.valueOf(movie.getTmdbId()));
@@ -94,7 +110,11 @@ public class TmdbApiClient {
 		System.out.println("Total number of movies upcoming= " + moviesUpcoming.size());	
 		for (TmdbMovie movie : moviesUpcoming) {
 			if (!setOfAlreadySavedTmdbIds.contains(String.valueOf(movie.getTmdbId()))) {
-				ActiveMovie activeMovie = new ActiveMovie(execCount, STATUS_UPCOMING, movie);
+				boolean searchForTweets = true;
+				if (ignoredTitles.contains(movie.getTitle().toLowerCase())) {
+					searchForTweets = false;
+				}
+				ActiveMovie activeMovie = new ActiveMovie(execCount, STATUS_UPCOMING, movie, searchForTweets);
 				System.out.println("Saving the upcoming movie:" + activeMovie.getTitle() + " with the primaryKey:" +activeMovie.getTmdbIdCount());
 				movieService.createActiveMovie(activeMovie);	
 				setOfAlreadySavedTmdbIds.add(String.valueOf(movie.getTmdbId()));

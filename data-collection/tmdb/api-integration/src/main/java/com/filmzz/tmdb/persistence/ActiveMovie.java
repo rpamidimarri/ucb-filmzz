@@ -20,6 +20,8 @@ public class ActiveMovie implements Serializable {
 	//Timestamp when the script was run
 	private String executionTime;
 	private String title;
+	private String searchTitle;
+	private String searchForTweets;
 	
 	private String tmdbBudget;
 	private String tmdbHomePage;
@@ -38,7 +40,7 @@ public class ActiveMovie implements Serializable {
 	public ActiveMovie() {		
 	}
 	
-	public ActiveMovie(int execCount, String status, TmdbMovie tmdbMovie) {
+	public ActiveMovie(int execCount, String status, TmdbMovie tmdbMovie, boolean searchForTweets) {
 		TmdbIdCount pk = new TmdbIdCount();
 		pk.setExecutionCount(execCount);
 		pk.setTmdbId(String.valueOf(tmdbMovie.getTmdbId()));
@@ -59,6 +61,18 @@ public class ActiveMovie implements Serializable {
 		this.tmdbTitle = tmdbMovie.getTitle();
 		this.tmdbVoteAverage = String.valueOf(tmdbMovie.getVoteAverage());
 		this.tmdbVoteCount = String.valueOf(tmdbMovie.getVoteCount());
+		
+		if (tmdbTitle.contains(":")) {
+			this.searchTitle = tmdbTitle.split(":")[0];
+		} else {
+			this.searchTitle = tmdbTitle;
+		}
+		
+		if (searchForTweets) {
+			this.searchForTweets = "true";
+		} else {
+			this.searchForTweets = "false";
+		}
 	}
 
 	public TmdbIdCount getTmdbIdCount() {
