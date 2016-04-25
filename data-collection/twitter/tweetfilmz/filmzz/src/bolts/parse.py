@@ -67,7 +67,7 @@ class ParseTweet(Bolt):
             unicodevalue = unicode(rec[1].lower(), "utf-8")
             titlemap[rec[0]]=unicodevalue
             titles.append(unicodevalue) 
-       
+        
         database_connection.close()
      
     def process(self, tup):

@@ -59,6 +59,10 @@ class Tweets(Spout):
 
         # Create the listener for twitter stream
         listener = TweetStreamListener(self)
+
+        # NOTE THAT THERE ARE SOME WORDS  WE NEED TO IGNORE, EVEN IF THERE ARE MOVIES NAMES BASED ON IT
+        # THIS WILL HAVE TO BE IN A PROPERTIES FILE WHICH NEEDS TO BE UPDATED DAILY. OR IT SHOULD BE A COLUMN IN THE ACTIVE MOVIE TO IGNORE A MOVIE.
+        ignored_titles=["24","fake","countdown", "the ticket", "parents"]
        
         # CODE TO GET THE PHRASES TO FILTER ON.. 
 	maxCount = 0
@@ -75,8 +79,7 @@ class Tweets(Spout):
         titlemap = {}
         titles=[]
         for rec in records:
-            titles.append(unicode(rec[1], "utf-8"))
-
+            titles.append(unicode(rec[1], "utf-8")) 
         #self.log('Printing the Tmdb ids and the movie titles for UPCOMING MOVIES we are going to filter in tweets')
         # Create the stream and listen for english tweets
         #for running_title in running_titles:

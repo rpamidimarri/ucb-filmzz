@@ -60,6 +60,10 @@ class Tweets(Spout):
 
         # Create the listener for twitter stream
         listener = TweetStreamListener(self)
+
+        # NOTE THAT THERE ARE SOME WORDS  WE NEED TO IGNORE, EVEN IF THERE ARE MOVIES NAMES BASED ON IT
+        # THIS WILL HAVE TO BE IN A PROPERTIES FILE WHICH NEEDS TO BE UPDATED DAILY. OR IT SHOULD BE A COLUMN IN THE ACTIVE MOVIE TO IGNORE A MOVIE.
+        ignored_titles=["24","fake","countdown", "the ticket", "parents"]
        
         # CODE TO GET THE PHRASES TO FILTER ON.. 
 	maxCount = 0

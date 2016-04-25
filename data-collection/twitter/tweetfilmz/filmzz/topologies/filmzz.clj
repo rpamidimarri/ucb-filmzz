@@ -27,10 +27,10 @@
           ["id","title","tweet"]
           :p 2
           )
-     "count-bolt" (python-bolt-spec
+     "statistic-bolt" (python-bolt-spec
           options
           {"parse-tweet-bolt" ["id"]}
-          "bolts.wordcount.WordCounter"
+          "bolts.tweetstatistic.TweetStatistic"
           ["title" "count"]
           :p 2
           )
