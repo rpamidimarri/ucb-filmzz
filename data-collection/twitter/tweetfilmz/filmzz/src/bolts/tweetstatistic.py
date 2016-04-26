@@ -12,6 +12,9 @@ from vaderSentiment.vaderSentiment import sentiment as vaderSentiment
 # positive, neutral, negative and compound sentiment values for it
 ################################################################################
 
+conn = psycopg2.connect(database="filmzz", user="postgres", password="pass", host="localhost", port="5432")
+cur = conn.cursor()
+
 class TweetStatistic(Bolt):
     
     def initialize(self, stormconf, context):
@@ -40,8 +43,8 @@ class TweetStatistic(Bolt):
 
         # Get existing running count, running values for positive, negative, neutral & compound sentiment 
         # based on keyword, tmdbid, and increment it by one (for the counter) and the sentiment values from vs.
-        conn = psycopg2.connect(database="filmzz", user="postgres", password="pass", host="localhost", port="5432")
-        cur = conn.cursor()
+        #conn = psycopg2.connect(database="filmzz", user="postgres", password="pass", host="localhost", port="5432")
+        #cur = conn.cursor()
         currentCount=0
         currentSentiment=[]
         cur.execute("SELECT runningCount from TweetStatistic WHERE tmdbId=%s", [id])
@@ -51,25 +54,26 @@ class TweetStatistic(Bolt):
       
         for key, value in vs.items():
 	    currentSentiment.append(value) 
-        #for i in range(3):
-        #    currentSentiment[i] =+ vslist[i]
          
         if currentCount == 0:
             # Insert new rows into Tweets Statistic database with values for counter value, Movie Title and tmdbId
             currentCount = currentCount + 1
             cur.execute("INSERT INTO TweetStatistic (tmdbId, title, runningCount, runningNegativeSentiment, runningNeutralSentiment, runningPositiveSentiment, runningCompoundSentiment) VALUES (%s,%s,%s,%s,%s,%s,%s)", [id, title, currentCount, currentSentiment[0], currentSentiment[1], currentSentiment[2], currentSentiment[3]])
         else:
+            cur.execute("SELECT runningNegativeSentiment, runningNeutralSentiment, runningPositiveSentiment, runningCompoundSentiment from TweetStatistic WHERE tmdbId=%s", [id])
+            result=cur.fetchone()
             currentCount = currentCount + 1
-            # Update the counter value in the Tweets Statistic database
-            cur.execute("UPDATE TweetStatistic SET runningCount = %s, runningNegativeSentiment = %s, runningNeutralSentiment = %s, runningPositiveSentiment=%s, runningCompoundSentiment = %s WHERE tmdbId = %s", (currentCount, currentSentiment[0], currentSentiment[1], currentSentiment[2], currentSentiment[3], id))
-            # Update the sentiment in the Tweets Statistic database
-        conn.commit()
-        conn.close()
+            if result != None:
+               runningNegativeSentiment=currentSentiment[0]+result[0]
+               runningNeutralSentiment=currentSentiment[1]+result[1]
+               runningPositiveSentiment=currentSentiment[2]+result[2]
+               runningCompoundSentiment=currentSentiment[3]+result[3]
+               self.log('Updating the statistics for id:%s' %(id))
+               # Update the Tweets Statistic database
+               cur.execute("UPDATE TweetStatistic SET runningCount = %s, runningNegativeSentiment = %s, runningNeutralSentiment = %s, runningPositiveSentiment=%s, runningCompoundSentiment = %s WHERE tmdbId = %s", (currentCount, runningNegativeSentiment, runningNeutralSentiment, runningPositiveSentiment, runningCompoundSentiment, id))
+               conn.commit()
         
 
-        
-
-        
         
 
 

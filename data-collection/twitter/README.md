@@ -3,3 +3,9 @@
 3. You will have to provide the Twitter API creds in the tweets.py of the spout for the authentication to work fine. Do not checkin your creds.
 4. I could get part of this working on my AWS machine - did not yet integrate with Vader and do not have the code to update the tweet tables. 
 5. I added comments to the spouts and bolts on where and what needs to be changed.
+
+Additional python modules:
+pip install simplejson
+pip install vaderSentiment
+
+Make sure that all the tables as defined in data-store/staging-scripts are created (run the alters too)

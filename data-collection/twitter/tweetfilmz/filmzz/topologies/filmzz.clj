@@ -8,13 +8,13 @@
     {"running-movie-spout" (python-spout-spec
           options
           "spouts.runningmovies.Tweets"
-          ["tweet"]
+          ["tweet","latitude","longitude","country","region"]
           :p 1
           )
      "upcoming-movie-spout" (python-spout-spec
           options
           "spouts.upcomingmovies.Tweets"
-          ["tweet"]
+          ["tweet","latitude","longitude","country","region"]
           :p 1
           )
     }

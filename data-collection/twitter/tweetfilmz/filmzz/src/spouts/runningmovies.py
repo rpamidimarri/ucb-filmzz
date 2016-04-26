@@ -3,6 +3,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import itertools, time
 import tweepy, copy 
 import Queue, threading
+import simplejson as json
 import psycopg2
 
 from streamparse.spout import Spout
@@ -33,9 +34,18 @@ class TweetStreamListener(tweepy.StreamListener):
         super(self.__class__, self).__init__(listener.tweepy_api())
 
     def on_status(self, status):
-        self.listener.queue().put(status.text, timeout = 0.01)
+        latitude=None
+        longitude=None
+        place=None
+        if status.coordinates is not None:
+          latitude = status.coordinates['coordinates'][1]
+          longitude = status.coordinates['coordinates'][0]
+       
+        if status.place is not None:
+           place=status.place 
+        self.listener.queue().put([status.text,latitude,longitude,place], timeout = 0.01)
         return True
-  
+ 
     def on_error(self, status_code):
         return True # keep stream alive
   
@@ -96,10 +106,19 @@ class Tweets(Spout):
 
     def next_tuple(self):
         try:
-            tweet = self.queue().get(timeout = 0.1) 
-            if tweet:  
+            tweet_data = self.queue().get(timeout = 0.1) 
+            if tweet_data:  
                 self.queue().task_done()
-                self.emit([tweet])
+                #self.log('Tweet=%s is from latitude=%s, longitude=%s, place=%s' %(tweet_data[0].encode('ascii','replace'),tweet_data[1],tweet_data[2],tweet_data[3]))
+                country=""
+                region=""
+                place=tweet_data[3]
+                if place is not None:
+                   if place.country is not None:
+                      country=place.country
+                   if place.full_name is not None:
+                      region=place.full_name                
+                self.emit([tweet_data[0],tweet_data[1],tweet_data[2],country.encode('ascii','replace'),region.encode('ascii','replace')])
  
         except Queue.Empty:
             self.log("Empty queue exception ")

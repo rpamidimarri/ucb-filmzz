@@ -9,7 +9,8 @@ import psycopg2
 ################################################################################
 titlemap={}
 titles=[]
-#database_connection=None
+database_connection = psycopg2.connect(database="filmzz", user="postgres", password="pass", host="localhost", port="5432")
+cur = database_connection.cursor()
 def ascii_string(s):
   return all(ord(c) < 128 for c in s)
 
@@ -19,21 +20,19 @@ def hasAnyMovieRelatedWord(tweet):
      if movieWord in tweet:
         return True
 #TODO: WE NEED TO MAKE SURE THAT WE DO NOT OPEN A NEW CONNECTION EVERYTIME WE GET A TWEET. WE NEED TO OPEN IT ONCE AND REUSE IT. INVESTIGATE WHY THAT DOES NOT WORK
-def saveToDb(keys,values,tweet):
-   print('INSIDE SAVETODB!!!')
+def saveToDb(keys,values,tweet,latitude,longitude,country,region):
+   if latitude == None:
+      latitude=""
+   if longitude == None:
+      longitude="" 
    millis = str(int(round(time.time() * 1000)))
-   #if database_connection is None:
-   #    print('Opening a new DB connection')
-   database_connection = psycopg2.connect(database="filmzz", user="postgres", password="pass", host="localhost", port="5432")
-   cur = database_connection.cursor()
    #The primary key is a sequence based id (Did not want to rely on the timestamp (precision of milliseconds => if we get 2 tweets for a movie at the same time, it will fail
    #With the primary key as a sequence we will never fail 
-   #TODO 1. FIGURE OUT THE GEO LOCATION PART AND INSERT THE LATITUDE AND LONGITUDE.
    #TODO 2. I ADDED FIELDS FOR THE INDIVIDUAL (NOT RUNNING) SENTIMENT SCORES FOR A PARTICULAR TWEET. We should explore if we can update this Tweets table in
    #the Tweet statistic bolt - if we want to do that, we can pass in the Tweet id (generated once we insert into the Tweets table) into the statistic bolt
-   cur.execute("INSERT INTO Tweets(tmdbId,tweetTime,keyword,fullTweet) VALUES(%s,%s,%s,%s)", [keys,millis,values,tweet]);
+   cur.execute("INSERT INTO Tweets(tmdbId,tweetTime,keyword,fullTweet,latitude,longitude,country,region) VALUES(%s,%s,%s,%s,%s,%s,%s,%s)", [keys,millis,values,tweet,latitude,longitude,country,region]);
    database_connection.commit()
-   database_connection.close()
+   #database_connection.close()
 
 class ParseTweet(Bolt):
     def initialize(self, stormconf, context):
@@ -73,6 +72,10 @@ class ParseTweet(Bolt):
     def process(self, tup):
         #if we do the lower case, we can check for the existence of movie titles better
         tweet = tup.values[0].lower()  # extract the tweet
+        latitude=tup.values[1]
+        longitude=tup.values[2]
+        country=tup.values[3]
+        region=tup.values[4]
         #self.log('Found tweet :%s' %(tweet.encode('ascii','replace'))) 
         foundMatch = False
         for keys,values in titlemap.items():
@@ -80,8 +83,8 @@ class ParseTweet(Bolt):
            #so, we do one extra level of filtering - filter based on some of the common "movie" associated words - like "movie", "theater", "cinema", etc.
            if values in tweet:
               if hasAnyMovieRelatedWord(tweet):
-                 self.log("Match Found! The keyword:%s for id:%s found in tweet:%s, Emitting the tweet" %(values.encode('ascii','replace'),keys,tweet.encode('ascii','replace')))
-                 saveToDb(keys,values,tweet)
+                 self.log("Match Found! The keyword:%s for id:%s found in tweet:%s, Region=%s, Emitting the tweet" %(values.encode('ascii','replace'),keys,tweet.encode('ascii','replace'),region.encode('ascii','replace')))
+                 saveToDb(keys,values.encode('ascii','replace'),tweet.encode('ascii','replace'),latitude,longitude,country.encode('ascii','replace'),region.encode('ascii','replace'))
                  foundMatch=True 
                  self.emit([keys,values,tweet])
                  break	
